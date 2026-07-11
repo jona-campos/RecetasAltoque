@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "36976463600",
+    "project_id": "recetas-al-toque-cr",
+    "storage_bucket": "recetas-al-toque-cr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:36976463600:android:eaf193602ee8349f4b7c35",
+        "android_client_info": {
+          "package_name": "com.example.recetasaltoque"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDn-mL_ng5S-gMG4aAkIMA67ccmlhnresA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
