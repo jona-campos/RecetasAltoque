@@ -47,6 +47,7 @@ class _SearchScreenState extends State<SearchScreen> {
       if (state is RecipesLoaded && state.hasMore) {
         context.read<RecipesBloc>().add(LoadMoreRecipes(
               query: state.query,
+              translatedQuery: state.translatedQuery,
               offset: state.recipes.length,
             ));
       }

@@ -4,11 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:recetasaltoque/domain/entities/recipe.dart';
 import 'package:recetasaltoque/domain/usecases/get_recipes.dart';
+import 'package:recetasaltoque/domain/usecases/translate_text.dart';
 import 'package:recetasaltoque/presentation/bloc/recipes/recipes_bloc.dart';
 import 'package:recetasaltoque/presentation/bloc/recipes/recipes_state.dart';
 import 'package:recetasaltoque/presentation/pages/search_screen.dart';
 
 class MockGetRecipes extends Mock implements GetRecipes {}
+class MockTranslateText extends Mock implements TranslateText {}
 
 void main() {
   late MockGetRecipes mockGetRecipes;
@@ -21,7 +23,10 @@ void main() {
     return MaterialApp(
       home: BlocProvider(
         create: (context) {
-          final bloc = RecipesBloc(getRecipes: mockGetRecipes);
+          final bloc = RecipesBloc(
+            getRecipes: mockGetRecipes,
+            translateText: MockTranslateText(),
+          );
           if (initialState != null) {
             // Simular estado inicial
           }

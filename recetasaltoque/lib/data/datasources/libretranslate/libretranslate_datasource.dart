@@ -16,48 +16,70 @@ class LibreTranslateDatasourceImpl implements LibreTranslateDatasource {
 
   LibreTranslateDatasourceImpl({required this.httpClient});
 
+  static const int _maxRetries = 2;
+  static const Duration _requestTimeout = Duration(seconds: 30);
+  static const Duration _healthCheckTimeout = Duration(seconds: 20);
+
   @override
   Future<String> translate(String text, {String from = 'en', String to = 'es'}) async {
-    try {
-      final uri = Uri.parse('${EnvConfig.libreTranslateUrl}/translate');
+    return _translateWithRetry(text, from: from, to: to);
+  }
 
-      final response = await httpClient.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'q': text,
-          'source': from,
-          'target': to,
-        }),
-      ).timeout(const Duration(seconds: 30));
+  Future<String> _translateWithRetry(String text, {required String from, required String to}) async {
+    Exception? lastException;
+    
+    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
+      try {
+        final uri = Uri.parse('${EnvConfig.libreTranslateUrl}/translate');
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        return jsonResponse['translatedText'] as String;
-      } else if (response.statusCode == 400) {
-        throw const TranslationException(
-          message: 'Texto invalido para traducir',
+        final response = await httpClient.post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'q': text,
+            'source': from,
+            'target': to,
+          }),
+        ).timeout(_requestTimeout);
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonResponse = json.decode(response.body);
+          return jsonResponse['translatedText'] as String;
+        } else if (response.statusCode == 400) {
+          throw const TranslationException(
+            message: 'Texto invalido para traducir',
+          );
+        } else if (response.statusCode == 422) {
+          throw const TranslationException(
+            message: 'Idioma no soportado o texto demasiado largo',
+          );
+        } else if (response.statusCode == 429) {
+          throw const TranslationException(
+            message: 'Demasiadas solicitudes, intente mas tarde',
+          );
+        } else if (response.statusCode == 503) {
+          throw const TranslationException(
+            message: 'Servicio de traduccion no disponible',
+          );
+        } else {
+          throw TranslationException(
+            message: 'Error en la traduccion: ${response.statusCode}',
+          );
+        }
+      } on TranslationException {
+        rethrow;
+      } catch (e) {
+        lastException = TranslationException(
+          message: 'Error de conexion con LibreTranslate: ${e.toString()}',
         );
-      } else if (response.statusCode == 422) {
-        throw const TranslationException(
-          message: 'Idioma no soportado o texto demasiado largo',
-        );
-      } else if (response.statusCode == 503) {
-        throw const TranslationException(
-          message: 'Servicio de traduccion no disponible',
-        );
-      } else {
-        throw TranslationException(
-          message: 'Error en la traduccion: ${response.statusCode}',
-        );
+        if (attempt < _maxRetries) {
+          debugPrint('Translation attempt ${attempt + 1} failed, retrying...: $e');
+          await Future.delayed(Duration(seconds: 1 << attempt)); // Exponential backoff
+        }
       }
-    } on TranslationException {
-      rethrow;
-    } catch (e) {
-      throw TranslationException(
-        message: 'Error de conexion con LibreTranslate: ${e.toString()}',
-      );
     }
+    
+    throw lastException!;
   }
 
   @override
@@ -70,7 +92,7 @@ class LibreTranslateDatasourceImpl implements LibreTranslateDatasource {
         continue;
       }
       
-      final translation = await translate(text, from: from, to: to);
+      final translation = await _translateWithRetry(text, from: from, to: to);
       translations.add(translation);
     }
     
@@ -90,7 +112,7 @@ class LibreTranslateDatasourceImpl implements LibreTranslateDatasource {
         continue;
       }
 
-      final translatedLine = await translate(line.trim(), from: from, to: to);
+      final translatedLine = await _translateWithRetry(line.trim(), from: from, to: to);
       translatedLines.add(translatedLine);
     }
 
@@ -101,7 +123,7 @@ class LibreTranslateDatasourceImpl implements LibreTranslateDatasource {
   Future<bool> isAvailable() async {
     try {
       final uri = Uri.parse('${EnvConfig.libreTranslateUrl}/languages');
-      final response = await httpClient.get(uri).timeout(const Duration(seconds: 10));
+      final response = await httpClient.get(uri).timeout(_healthCheckTimeout);
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('LibreTranslate health check failed: $e');

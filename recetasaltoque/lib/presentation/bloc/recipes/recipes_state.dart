@@ -20,15 +20,17 @@ class RecipesLoaded extends RecipesState {
   final List<Recipe> recipes;
   final bool hasMore;
   final String query;
+  final String? translatedQuery;
 
   const RecipesLoaded({
     required this.recipes,
     this.hasMore = true,
     required this.query,
+    this.translatedQuery,
   });
 
   @override
-  List<Object?> get props => [recipes, hasMore, query];
+  List<Object?> get props => [recipes, hasMore, query, translatedQuery];
 }
 
 class RecipesError extends RecipesState {

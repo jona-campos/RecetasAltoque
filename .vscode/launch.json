@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "recetasaltoque",
+            "cwd": "recetasaltoque",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "recetasaltoque (profile mode)",
+            "cwd": "recetasaltoque",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "recetasaltoque (release mode)",
+            "cwd": "recetasaltoque",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

@@ -13,52 +13,141 @@ class RecipesApiDatasourceImpl implements RecipesApiDatasource {
 
   RecipesApiDatasourceImpl({required this.httpClient});
 
-  static const String _baseUrl = 'https://api.api-ninjas.com/v1/recipe';
+  static const String _baseUrl = 'https://api.spoonacular.com/recipes';
 
   @override
   Future<List<RecipeModel>> searchRecipes(String query, {int offset = 0}) async {
     try {
-      final uri = Uri.parse('$_baseUrl').replace(
+      // Step 1: Find recipes by ingredients
+      final findUri = Uri.parse('$_baseUrl/findByIngredients').replace(
         queryParameters: {
-          'query': query,
+          'ingredients': query,
+          'number': '1',
           'offset': offset.toString(),
+          'ranking': '2', // maximize used ingredients
+          'ignorePantry': 'true',
+          'apiKey': EnvConfig.spoonacularApiKey,
         },
       );
 
-      final response = await httpClient.get(
-        uri,
-        headers: {
-          'X-Api-Key': EnvConfig.apiKeyNinja,
-        },
-      ).timeout(const Duration(seconds: 30));
+      final findResponse = await httpClient.get(findUri).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList = json.decode(response.body);
-        return jsonList
-            .map((json) => RecipeModel.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else if (response.statusCode == 401) {
-        throw const ServerException(
-          message: 'API Key invalida o no proporcionada',
-          statusCode: 401,
-        );
-      } else if (response.statusCode == 429) {
-        throw const ServerException(
-          message: 'Limite de solicitudes alcanzado',
-          statusCode: 429,
-        );
-      } else {
-        throw ServerException(
-          message: 'Error al buscar recetas: ${response.statusCode}',
-          statusCode: response.statusCode,
-        );
+      if (findResponse.statusCode != 200) {
+        throw _handleError(findResponse);
       }
+
+      final List<dynamic> findJsonList = json.decode(findResponse.body);
+      
+      if (findJsonList.isEmpty) {
+        return [];
+      }
+
+      // Step 2: Get detailed information (including instructions) for each recipe
+      final recipeIds = findJsonList
+          .map((json) => json['id'] as int)
+          .toList();
+
+      final detailUri = Uri.parse('$_baseUrl/informationBulk').replace(
+        queryParameters: {
+          'ids': recipeIds.join(','),
+          'includeNutrition': 'false',
+          'apiKey': EnvConfig.spoonacularApiKey,
+        },
+      );
+
+      final detailResponse = await httpClient.get(detailUri).timeout(const Duration(seconds: 30));
+
+      if (detailResponse.statusCode != 200) {
+        throw _handleError(detailResponse);
+      }
+
+      final List<dynamic> detailJsonList = json.decode(detailResponse.body);
+
+      // Combine find results with detail results
+      final Map<int, Map<String, dynamic>> detailMap = {
+        for (var detail in detailJsonList) detail['id'] as int: detail as Map<String, dynamic>
+      };
+
+      return findJsonList.map((findJson) {
+        final id = findJson['id'] as int;
+        final detailJson = detailMap[id] ?? {};
+        return _recipeFromCombinedJson(findJson, detailJson);
+      }).toList();
     } on ServerException {
       rethrow;
     } catch (e) {
       throw ServerException(
-        message: 'Error de conexion con la API: ${e.toString()}',
+        message: 'Error de conexión con Spoonacular: ${e.toString()}',
       );
+    }
+  }
+
+  RecipeModel _recipeFromCombinedJson(Map<String, dynamic> findJson, Map<String, dynamic> detailJson) {
+    // Extract ingredients from both used and missed ingredients
+    final usedIngredients = (findJson['usedIngredients'] as List<dynamic>?)
+        ?.map((i) => i['original'] as String? ?? i['name'] as String? ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList() ?? [];
+    
+    final missedIngredients = (findJson['missedIngredients'] as List<dynamic>?)
+        ?.map((i) => i['original'] as String? ?? i['name'] as String? ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList() ?? [];
+
+    final allIngredients = [...usedIngredients, ...missedIngredients].join('\n');
+
+    // Get instructions from detail response
+    String instructions = detailJson['instructions'] as String? ?? '';
+    if (instructions.isEmpty && detailJson['analyzedInstructions'] != null) {
+      final analyzed = detailJson['analyzedInstructions'] as List<dynamic>;
+      if (analyzed.isNotEmpty) {
+        final steps = analyzed.first['steps'] as List<dynamic>?;
+        if (steps != null) {
+          instructions = steps
+              .map((s) => s['step'] as String? ?? '')
+              .where((s) => s.isNotEmpty)
+              .join('\n');
+        }
+      }
+    }
+
+    // Get servings
+    final servings = detailJson['servings']?.toString() ?? '1';
+
+    // Use Spoonacular ID as the unique identifier
+    final id = findJson['id'].toString();
+
+    return RecipeModel(
+      id: id,
+      title: findJson['title'] as String? ?? '',
+      ingredients: allIngredients,
+      servings: servings,
+      instructions: instructions,
+    );
+  }
+
+  ServerException _handleError(http.Response response) {
+    switch (response.statusCode) {
+      case 401:
+        return const ServerException(
+          message: 'API Key inválida o no proporcionada',
+          statusCode: 401,
+        );
+      case 402:
+        return const ServerException(
+          message: 'Límite de plan superado (requiere suscripción)',
+          statusCode: 402,
+        );
+      case 429:
+        return const ServerException(
+          message: 'Límite de solicitudes alcanzado',
+          statusCode: 429,
+        );
+      default:
+        return ServerException(
+          message: 'Error al buscar recetas: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
     }
   }
 }

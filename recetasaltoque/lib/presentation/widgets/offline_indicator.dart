@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 
 class OfflineIndicator extends StatefulWidget {
   const OfflineIndicator({super.key});
@@ -10,6 +11,7 @@ class OfflineIndicator extends StatefulWidget {
 
 class _OfflineIndicatorState extends State<OfflineIndicator> {
   bool _isOffline = false;
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
 
   @override
   void initState() {
@@ -17,17 +19,23 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
     _checkConnectivity();
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _checkConnectivity() async {
     final connectivity = Connectivity();
-    final result = await connectivity.checkConnectivity();
+    final results = await connectivity.checkConnectivity();
     setState(() {
-      _isOffline = result == ConnectivityResult.none;
+      _isOffline = results.contains(ConnectivityResult.none);
     });
 
-    connectivity.onConnectivityChanged.listen((result) {
+    _subscription = connectivity.onConnectivityChanged.listen((results) {
       if (mounted) {
         setState(() {
-          _isOffline = result == ConnectivityResult.none;
+          _isOffline = results.contains(ConnectivityResult.none);
         });
       }
     });

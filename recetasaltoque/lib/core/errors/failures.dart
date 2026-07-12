@@ -52,3 +52,13 @@ class NetworkFailure extends Failure {
   @override
   List<Object?> get props => [message, code];
 }
+
+class AuthFailure extends Failure {
+  const AuthFailure({
+    required super.message,
+    super.code,
+  });
+
+  @override
+  List<Object?> get props => [message, code];
+}

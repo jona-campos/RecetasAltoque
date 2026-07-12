@@ -2,6 +2,7 @@ import '../../domain/entities/recipe.dart';
 
 class RecipeModel extends Recipe {
   const RecipeModel({
+    required super.id,
     required super.title,
     required super.ingredients,
     required super.servings,
@@ -12,8 +13,11 @@ class RecipeModel extends Recipe {
   });
 
   factory RecipeModel.fromJson(Map<String, dynamic> json) {
+    final title = json['title'] as String? ?? '';
+    final spoonacularId = json['id']?.toString();
     return RecipeModel(
-      title: json['title'] as String? ?? '',
+      id: spoonacularId ?? title.hashCode.toString(),
+      title: title,
       ingredients: json['ingredients'] as String? ?? '',
       servings: json['servings'] as String? ?? '1',
       instructions: json['instructions'] as String? ?? '',
@@ -22,6 +26,7 @@ class RecipeModel extends Recipe {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'title': title,
       'ingredients': ingredients,
       'servings': servings,
@@ -38,6 +43,7 @@ class RecipeModel extends Recipe {
     String? instructionsEs,
   }) {
     return RecipeModel(
+      id: recipe.id,
       title: recipe.title,
       ingredients: recipe.ingredients,
       servings: recipe.servings,
@@ -54,6 +60,7 @@ class RecipeModel extends Recipe {
     String? instructionsEs,
   }) {
     return RecipeModel(
+      id: id,
       title: title,
       ingredients: ingredients,
       servings: servings,
