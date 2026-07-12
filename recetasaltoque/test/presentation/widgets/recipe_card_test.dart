@@ -5,6 +5,7 @@ import 'package:recetasaltoque/presentation/widgets/recipe_card.dart';
 
 void main() {
   const testRecipe = Recipe(
+    id: 'chicken-alfredo',
     title: 'Chicken Alfredo',
     ingredients: '1 lb fettuccine\n2 cups heavy cream',
     servings: '4',

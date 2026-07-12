@@ -37,43 +37,76 @@ class RecipeRepositoryImpl implements RecipeRepository {
   Future<List<Recipe>> _translateRecipes(List<RecipeModel> recipes) async {
     final List<Recipe> translatedRecipes = [];
 
-    // Health check before translating
-    final isAvailable = await translationRepository.isAvailable();
-    if (!isAvailable) {
-      debugPrint('Translation service unavailable, returning original recipes');
-      for (final recipe in recipes) {
-        translatedRecipes.add(recipe);
-      }
-      return translatedRecipes;
-    }
-
     for (final recipe in recipes) {
+      String? titleTranslation;
+      String? ingredientsTranslation;
+      String? instructionsTranslation;
+
+      // Translate title with retry
       try {
-        final titleTranslation = await translationRepository.translate(
+        titleTranslation = await _translateWithRetry(
+          () => translationRepository.translate(recipe.title),
+          'title',
           recipe.title,
         );
+      } catch (e) {
+        debugPrint('Title translation failed for "${recipe.title}": $e');
+      }
 
-        final ingredientsTranslation = await translationRepository.translateLongText(
+      // Translate ingredients with retry
+      try {
+        ingredientsTranslation = await _translateWithRetry(
+          () => translationRepository.translateLongText(recipe.ingredients),
+          'ingredients',
           recipe.ingredients,
         );
+      } catch (e) {
+        debugPrint('Ingredients translation failed for "${recipe.title}": $e');
+      }
 
-        final instructionsTranslation = await translationRepository.translateLongText(
+      // Translate instructions with retry
+      try {
+        instructionsTranslation = await _translateWithRetry(
+          () => translationRepository.translateLongText(recipe.instructions),
+          'instructions',
           recipe.instructions,
         );
-
-        translatedRecipes.add(
-          recipe.copyWithTranslation(
-            titleEs: titleTranslation,
-            ingredientsEs: ingredientsTranslation,
-            instructionsEs: instructionsTranslation,
-          ),
-        );
-      } on Exception catch (e) {
-        debugPrint('Translation failed for recipe "${recipe.title}": $e');
-        translatedRecipes.add(recipe);
+      } catch (e) {
+        debugPrint('Instructions translation failed for "${recipe.title}": $e');
       }
+
+      translatedRecipes.add(
+        recipe.copyWithTranslation(
+          titleEs: titleTranslation,
+          ingredientsEs: ingredientsTranslation,
+          instructionsEs: instructionsTranslation,
+        ),
+      );
     }
 
     return translatedRecipes;
+  }
+
+  Future<String> _translateWithRetry(
+    Future<String> Function() translateFn,
+    String field,
+    String originalText,
+  ) async {
+    const maxRetries = 2;
+    Exception? lastException;
+
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await translateFn();
+      } on Exception catch (e) {
+        lastException = e;
+        if (attempt < maxRetries) {
+          debugPrint('Translation retry $field (attempt ${attempt + 1}/${maxRetries + 1}): $e');
+          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+        }
+      }
+    }
+
+    throw lastException ?? Exception('Translation failed after retries');
   }
 }

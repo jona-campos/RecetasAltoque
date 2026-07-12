@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class SearchBarWidget extends StatefulWidget {
@@ -21,6 +22,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   final FocusNode _focusNode = FocusNode();
   String _lastSearch = '';
   bool _showClear = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
@@ -49,7 +52,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   }
 
   void _debounceSearch(String query) {
-    Future.delayed(widget.debounceDuration, () {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(widget.debounceDuration, () {
       if (_lastSearch == query) {
         widget.onSearch(query);
       }

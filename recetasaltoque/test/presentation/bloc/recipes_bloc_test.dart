@@ -3,19 +3,23 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:recetasaltoque/domain/entities/recipe.dart';
 import 'package:recetasaltoque/domain/usecases/get_recipes.dart';
+import 'package:recetasaltoque/domain/usecases/translate_text.dart';
 import 'package:recetasaltoque/presentation/bloc/recipes/recipes_bloc.dart';
 import 'package:recetasaltoque/presentation/bloc/recipes/recipes_event.dart';
 import 'package:recetasaltoque/presentation/bloc/recipes/recipes_state.dart';
 
 class MockGetRecipes extends Mock implements GetRecipes {}
+class MockTranslateText extends Mock implements TranslateText {}
 
 void main() {
   late RecipesBloc bloc;
   late MockGetRecipes mockGetRecipes;
+  late MockTranslateText mockTranslateText;
 
   setUp(() {
     mockGetRecipes = MockGetRecipes();
-    bloc = RecipesBloc(getRecipes: mockGetRecipes);
+    mockTranslateText = MockTranslateText();
+    bloc = RecipesBloc(getRecipes: mockGetRecipes, translateText: mockTranslateText);
   });
 
   tearDown(() {
@@ -24,6 +28,7 @@ void main() {
 
   final testRecipes = [
     const Recipe(
+      id: 'chicken-alfredo',
       title: 'Chicken Alfredo',
       ingredients: '1 lb fettuccine',
       servings: '4',
@@ -42,9 +47,11 @@ void main() {
       build: () {
         when(() => mockGetRecipes(any(), offset: any(named: 'offset')))
             .thenAnswer((_) async => testRecipes);
+        when(() => mockTranslateText(any(), from: any(named: 'from'), to: any(named: 'to')))
+            .thenAnswer((_) async => 'chicken');
         return bloc;
       },
-      act: (bloc) => bloc.add(SearchRecipes(query: 'chicken')),
+      act: (bloc) => bloc.add(SearchRecipes(query: 'pollo')),
       expect: () => [
         isA<RecipesLoading>(),
         isA<RecipesLoaded>(),
@@ -56,9 +63,11 @@ void main() {
       build: () {
         when(() => mockGetRecipes(any(), offset: any(named: 'offset')))
             .thenThrow(Exception('Error'));
+        when(() => mockTranslateText(any(), from: any(named: 'from'), to: any(named: 'to')))
+            .thenAnswer((_) async => 'chicken');
         return bloc;
       },
-      act: (bloc) => bloc.add(SearchRecipes(query: 'chicken')),
+      act: (bloc) => bloc.add(SearchRecipes(query: 'pollo')),
       expect: () => [
         isA<RecipesLoading>(),
         isA<RecipesError>(),
@@ -70,15 +79,18 @@ void main() {
       build: () {
         when(() => mockGetRecipes(any(), offset: any(named: 'offset')))
             .thenAnswer((_) async => testRecipes);
+        when(() => mockTranslateText(any(), from: any(named: 'from'), to: any(named: 'to')))
+            .thenAnswer((_) async => 'chicken');
         return bloc;
       },
-      act: (bloc) {
-        bloc.add(SearchRecipes(query: 'chicken'));
-        bloc.add(LoadMoreRecipes(query: 'chicken', offset: 1));
-      },
+      seed: () => RecipesLoaded(
+        recipes: testRecipes,
+        query: 'pollo',
+        translatedQuery: 'chicken',
+        hasMore: true,
+      ),
+      act: (bloc) => bloc.add(LoadMoreRecipes(query: 'pollo', offset: 1, translatedQuery: 'chicken')),
       expect: () => [
-        isA<RecipesLoading>(),
-        isA<RecipesLoaded>(),
         isA<RecipesLoaded>(),
       ],
     );
@@ -86,7 +98,7 @@ void main() {
     blocTest<RecipesBloc, RecipesState>(
       'debe emitir Initial cuando ClearRecipes',
       build: () => bloc,
-      seed: () => RecipesLoaded(recipes: testRecipes, query: 'chicken'),
+      seed: () => RecipesLoaded(recipes: testRecipes, query: 'pollo'),
       act: (bloc) => bloc.add(const ClearRecipes()),
       expect: () => [isA<RecipesInitial>()],
     );

@@ -24,6 +24,7 @@ void main() {
   });
 
   final testRecipeModel = const RecipeModel(
+    id: 'chicken-alfredo',
     title: 'Chicken Alfredo',
     ingredients: '1 lb fettuccine\n2 cups heavy cream',
     servings: '4',

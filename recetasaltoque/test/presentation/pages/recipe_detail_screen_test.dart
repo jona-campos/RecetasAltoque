@@ -1,10 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:recetasaltoque/domain/entities/recipe.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/get_recent_recipes.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/get_favorite_recipes.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/toggle_favorite.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/share_recipe.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/save_recent_recipe.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/remove_recent_recipe.dart';
+import 'package:recetasaltoque/domain/usecases/recipe/clear_recent_recipes.dart';
+import 'package:recetasaltoque/presentation/bloc/home/home_bloc.dart';
 import 'package:recetasaltoque/presentation/pages/recipe_detail_screen.dart';
+
+class MockGetRecentRecipes extends Mock implements GetRecentRecipes {}
+class MockGetFavoriteRecipes extends Mock implements GetFavoriteRecipes {}
+class MockToggleFavorite extends Mock implements ToggleFavorite {}
+class MockShareRecipe extends Mock implements ShareRecipe {}
+class MockSaveRecentRecipe extends Mock implements SaveRecentRecipe {}
+class MockRemoveRecentRecipe extends Mock implements RemoveRecentRecipe {}
+class MockClearRecentRecipes extends Mock implements ClearRecentRecipes {}
 
 void main() {
   const testRecipe = Recipe(
+    id: 'chicken-alfredo',
     title: 'Chicken Alfredo',
     ingredients: '1 lb fettuccine\n2 cups heavy cream',
     servings: '4',
@@ -16,7 +35,18 @@ void main() {
 
   Widget createRecipeDetailScreen() {
     return MaterialApp(
-      home: const RecipeDetailScreen(recipe: testRecipe),
+      home: BlocProvider(
+        create: (context) => HomeBloc(
+          getRecentRecipes: MockGetRecentRecipes(),
+          getFavoriteRecipes: MockGetFavoriteRecipes(),
+          toggleFavorite: MockToggleFavorite(),
+          shareRecipe: MockShareRecipe(),
+          saveRecentRecipe: MockSaveRecentRecipe(),
+          removeRecentRecipe: MockRemoveRecentRecipe(),
+          clearRecentRecipes: MockClearRecentRecipes(),
+        ),
+        child: const RecipeDetailScreen(recipe: testRecipe),
+      ),
     );
   }
 

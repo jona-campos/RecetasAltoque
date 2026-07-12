@@ -12,7 +12,20 @@
           "package_name": "com.example.recetasaltoque"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "36976463600-5jv5jhnkb3an8m1sc7lmqtodrbckkueg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.recetasaltoque",
+            "certificate_hash": "88287376bd8d7128a70bb8635f568bcbf6095530"
+          }
+        },
+        {
+          "client_id": "36976463600-r9h16msepohbcs7rnq6lhhk4vi55p4bu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDn-mL_ng5S-gMG4aAkIMA67ccmlhnresA"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "36976463600-r9h16msepohbcs7rnq6lhhk4vi55p4bu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "36976463600-1m488sd4gv26a1c4j8bcuvuovq7s0ojo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.recetasaltoque"
+              }
+            }
+          ]
         }
       }
     }
